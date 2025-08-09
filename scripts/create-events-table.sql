@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS events (
+    id SERIAL PRIMARY KEY,
+    event_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    location TEXT NOT NULL,
+    max_participants INTEGER NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
