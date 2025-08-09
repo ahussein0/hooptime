@@ -38,4 +38,3 @@ export function ContentCardFooter({ children, className, ...props }: ContentCard
     </div>
   )
 }
-

@@ -7,7 +7,6 @@ interface ParticipantData {
   eventId: number
   name: string
   phoneNumber: string
-  paymentAmount?: number
   status: "in" | "out"
 }
 
@@ -19,10 +18,10 @@ export async function addParticipant(data: ParticipantData) {
       throw new Error("Phone number should not exceed 10 digits")
     }
 
-    // First, add the participant to the participants table
+    // First, add the participant to the participants table (explicitly specify columns)
     const [participant] = await sql`
-      INSERT INTO participants (name, phone_number, payment_amount, status)
-      VALUES (${data.name}, ${data.phoneNumber}, ${data.paymentAmount || 0}, ${data.status})
+      INSERT INTO participants (name, phone_number, status)
+      VALUES (${data.name}, ${data.phoneNumber}, ${data.status})
       RETURNING id
     `
 
@@ -156,3 +155,120 @@ export async function backOut(phoneNumber: string, eventId: number) {
   }
 }
 
+interface CreateEventData {
+  eventDate: string
+  location: string
+  maxParticipants: number
+  creatorPhoneNumber: string // Added
+}
+
+interface CreateWeeklyEventsData {
+  startDate: string
+  location: string
+  maxParticipants: number
+  weeksToGenerate: number
+  creatorPhoneNumber: string // Added
+}
+
+export async function createEvent(data: CreateEventData) {
+  try {
+    // Create the new event (no longer deactivating others)
+    await sql`
+      INSERT INTO events (event_date, location, max_participants, is_active, creator_phone_number)
+      VALUES (${data.eventDate}, ${data.location}, ${data.maxParticipants}, true, ${data.creatorPhoneNumber})
+    `
+
+    revalidatePath("/")
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error creating event:", error)
+    throw new Error("Failed to create event")
+  }
+}
+
+export async function createWeeklyEvents(data: CreateWeeklyEventsData) {
+  try {
+    const startDate = new Date(data.startDate)
+
+    // Create events for each week (all active now)
+    for (let i = 0; i < data.weeksToGenerate; i++) {
+      const eventDate = new Date(startDate)
+      eventDate.setDate(startDate.getDate() + i * 7)
+
+      await sql`
+        INSERT INTO events (event_date, location, max_participants, is_active, creator_phone_number)
+        VALUES (${eventDate.toISOString()}, ${data.location}, ${data.maxParticipants}, true, ${data.creatorPhoneNumber})
+      `
+    }
+
+    revalidatePath("/")
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error creating weekly events:", error)
+    throw new Error("Failed to create weekly events")
+  }
+}
+
+export async function toggleEventStatus(formData: FormData) {
+  const eventId = Number(formData.get("eventId"))
+  const currentStatus = formData.get("currentStatus") === "true"
+  const newStatus = !currentStatus
+
+  try {
+    await sql`
+      UPDATE events
+      SET is_active = ${newStatus}
+      WHERE id = ${eventId}
+    `
+  } catch (error) {
+    console.error("Error toggling event status:", error)
+    throw new Error("Failed to toggle event status")
+  }
+
+  revalidatePath("/")
+}
+
+export async function deleteEvent(eventId: number, userPhoneNumber: string) {
+  try {
+    // Normalize the user's phone number for comparison
+    const normalizedUserPhoneNumber = userPhoneNumber.replace(/\D/g, "")
+
+    // Fetch the event to get its creator's phone number
+    const [event] = await sql`
+      SELECT creator_phone_number FROM events WHERE id = ${eventId}
+    `
+
+    if (!event) {
+      throw new Error("Event not found.")
+    }
+
+    // Normalize the creator's phone number from the database
+    const normalizedCreatorPhoneNumber = event.creator_phone_number?.replace(/\D/g, "")
+
+    // Check if the provided phone number matches the creator's phone number
+    if (normalizedUserPhoneNumber !== normalizedCreatorPhoneNumber) {
+      throw new Error("You are not authorized to delete this event. Only the creator can delete it.")
+    }
+
+    // First, delete all participants for this event
+    await sql`
+      DELETE FROM event_participants 
+      WHERE event_id = ${eventId}
+    `
+
+    // Then delete the event itself
+    await sql`
+      DELETE FROM events 
+      WHERE id = ${eventId}
+    `
+
+    revalidatePath("/")
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting event:", error)
+    throw new Error(error instanceof Error ? error.message : "Failed to delete event")
+  }
+}

@@ -26,4 +26,3 @@ export function SectionHeader({ title, description, className, ...props }: Secti
     </div>
   )
 }
-

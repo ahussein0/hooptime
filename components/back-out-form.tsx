@@ -148,4 +148,3 @@ export default function BackOutForm({ eventId, onCancel, onSuccess }: BackOutFor
     </form>
   )
 }
-

@@ -2,9 +2,10 @@ import { getEventParticipants } from "@/lib/data"
 
 interface ParticipantsListProps {
   eventId: number
+  compact?: boolean
 }
 
-export default async function ParticipantsList({ eventId }: ParticipantsListProps) {
+export default async function ParticipantsList({ eventId, compact = false }: ParticipantsListProps) {
   const participants = await getEventParticipants(eventId)
 
   // Filter participants who are "in"
@@ -12,8 +13,32 @@ export default async function ParticipantsList({ eventId }: ParticipantsListProp
 
   if (confirmedParticipants.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-neutral-400">No players have signed up yet</p>
+      <div className={`text-center ${compact ? "py-4" : "py-12"}`}>
+        <p className={`text-neutral-400 ${compact ? "text-sm" : ""}`}>No players have signed up yet</p>
+      </div>
+    )
+  }
+
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        {confirmedParticipants.map((participant, index) => (
+          <div
+            key={participant.id}
+            className="flex items-center justify-between py-2 px-3 bg-neutral-50 rounded-md text-sm"
+          >
+            <span className="font-medium text-neutral-900 truncate">{participant.name}</span>
+            <span className="text-neutral-500 text-xs ml-2 flex-shrink-0">
+              {participant.phone_number.replace(/(\d{3})(\d{3})(\d{4})/, "($1) $2-$3")}
+            </span>
+          </div>
+        ))}
+        <div className="mt-3 pt-2 border-t border-neutral-200">
+          <div className="flex justify-between items-center text-sm">
+            <span className="font-medium text-neutral-700">Total Players</span>
+            <span className="font-semibold text-neutral-900">{confirmedParticipants.length}</span>
+          </div>
+        </div>
       </div>
     )
   }
@@ -54,4 +79,3 @@ export default async function ParticipantsList({ eventId }: ParticipantsListProp
     </div>
   )
 }
-
