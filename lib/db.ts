@@ -1,15 +1,15 @@
 import { neon } from "@neondatabase/serverless"
 
 // Create a SQL client with the Neon connection string
-const databaseUrl = process.env.MY_DB_CONNECTION_STRING
+const databaseUrl = process.env.DATABASE_URL
 
 if (!databaseUrl) {
-  // This error indicates that the MY_DB_CONNECTION_STRING environment variable is missing.
+  // This error indicates that the DATABASE_URL environment variable is missing.
   // In a Vercel deployment, this should be configured in your project settings.
   // In the v0 preview, this should be automatically provided by the Neon integration.
   // If you see this error, please ensure your Neon integration is correctly set up.
   throw new Error(
-    "MY_DB_CONNECTION_STRING environment variable is not set. Please ensure it's configured in your Vercel project settings or .env.local file for local development.",
+    "DATABASE_URL environment variable is not set. Please ensure it's configured in your Vercel project settings or .env.local file for local development.",
   )
 }
 
